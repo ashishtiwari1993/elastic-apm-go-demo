@@ -30,6 +30,7 @@ func main() {
 
     router.Any("/users", checkAuth, usersProxy)
     router.Any("/tasks", checkAuth, tasksProxy)
+    router.Any("/projects", checkAuth, projectsProxy)
     router.Run("localhost:8000")
 }
 
@@ -91,6 +92,32 @@ func usersProxy(c *gin.Context) {
 func tasksProxy(c *gin.Context) {
 
     remote, err := url.Parse("http://localhost:8002/srvtasks")
+	checkErr(c,err)
+
+    //extracting traceparent and tracestate
+    tx := apm.TransactionFromContext(c.Request.Context())
+    traceContext := tx.TraceContext()
+    traceparent := apmhttp.FormatTraceparentHeader(traceContext) 
+    tracestate := traceContext.State.String()
+
+    c.Request.Header.Add("Traceparent", traceparent)
+    c.Request.Header.Add("Tracestate", tracestate)
+
+	proxy := httputil.NewSingleHostReverseProxy(remote)
+
+	proxy.Director = func(req *http.Request) {
+		req.Header = c.Request.Header
+		req.Host = remote.Host
+		req.URL.Scheme = remote.Scheme
+		req.URL.Host = remote.Host
+		req.URL.Path = remote.Path
+	}
+	proxy.ServeHTTP(c.Writer, c.Request)    
+}
+
+func projectsProxy(c *gin.Context) {
+
+    remote, err := url.Parse("http://localhost:8003/srvprojects")
 	checkErr(c,err)
 
     //extracting traceparent and tracestate
