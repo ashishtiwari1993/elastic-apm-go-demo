@@ -27,6 +27,7 @@ func main() {
     router.Use(apmgin.Middleware(router))
 
     router.POST("/srvtasks", postTask)
+    router.GET("/srvtasks", getTask)
     router.Run("localhost:8002")
 }
 
@@ -35,6 +36,27 @@ type task struct {
     ProjectId string `json:"project_id"`
     Task string `json:"task"`
 }
+
+func getTask(c *gin.Context) {
+
+    ctx := c.Request.Context()
+
+    sql := "select user_id, project_id, task from tasks"
+    rows, err := db.QueryContext(ctx, sql)
+    checkErr(c,err)
+
+    var tasks[] task
+    for rows.Next() {
+		var t task
+		rows.Scan(&t.UserId, &t.ProjectId, &t.Task)
+		tasks = append(tasks, t)
+	}
+
+    c.IndentedJSON(http.StatusOK, gin.H{
+        "tasks": tasks,
+    })
+}
+
 
 func postTask(c *gin.Context) {
 

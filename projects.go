@@ -37,12 +37,33 @@ func main() {
     router.Use(apmgin.Middleware(router))
 
     router.POST("/srvprojects", postProject)
+    router.GET("/srvprojects", getProject)
     router.Run("localhost:8003")
 }
 
 type project struct {
     UserId string `json:"user_id"`
     Project string `json:"project"`
+}
+
+func getProject(c *gin.Context) {
+
+    ctx := c.Request.Context()
+
+    sql := "select user_id, project from projects"
+    rows, err := db.QueryContext(ctx, sql)
+    checkErr(c,err)
+
+    var projects[] project
+    for rows.Next() {
+		var p project
+		rows.Scan(&p.UserId, &p.Project)
+		projects = append(projects, p)
+	}
+
+    c.IndentedJSON(http.StatusOK, gin.H{
+        "projects": projects,
+    })
 }
 
 func postProject(c *gin.Context) {

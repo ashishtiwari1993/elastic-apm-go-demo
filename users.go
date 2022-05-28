@@ -27,6 +27,7 @@ func main() {
     router.Use(apmgin.Middleware(router))
 
     router.POST("/srvusers", postUser)
+    router.GET("/srvusers", getUser)
     router.Run("localhost:8001")
 }
 
@@ -34,6 +35,26 @@ type user struct {
     Name string `json:"name"`
     Dept string `json:"dept"`
     Role string `json:"role"`
+}
+
+func getUser(c *gin.Context) {
+
+    ctx := c.Request.Context()
+
+    sql := "select name, dept, role from users"
+    rows, err := db.QueryContext(ctx, sql)
+    checkErr(c,err)
+
+    var users[] user
+    for rows.Next() {
+		var u user
+		rows.Scan(&u.Name, &u.Dept, &u.Role)
+		users = append(users, u)
+	}
+
+    c.IndentedJSON(http.StatusOK, gin.H{
+        "users": users,
+    })
 }
 
 func postUser(c *gin.Context) {
